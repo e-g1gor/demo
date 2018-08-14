@@ -1,0 +1,355 @@
+mixin php()
+	|<?php
+	|
+	block
+	| ?>
+
+// Функции PHP
++php.
+	$items = [
+			['name' => 'Подосиновики лунные', 'icon' => '/wp-content/uploads/2018/08/grib.jpg', 'price' => 5],
+			['name' => 'Подберёзовики морские', 'icon' => '/wp-content/uploads/2018/08/grib2.jpg', 'price' =>  7],
+			['name' => 'Мухоморы обыкновенные', 'icon' => '/wp-content/uploads/2018/08/grib3.jpg', 'price' => 14]
+		];
+	function mailsender() {
+		global $items;
+		//echo 'So... ';
+		//Если не нужно, выходим
+		if($_POST["action"]!='order') {
+			return;
+		};
+		// Данные заказа
+		$mail = $_POST["mail"];
+		$name = htmlspecialchars($_POST["name"]);
+		$cart = json_decode($_POST["cart"]);
+		$address = htmlspecialchars($_POST["address"]);
+		// Валидация email-адреса
+		$re = '/^[\w.-]*[a-z0-9]@[\w.-]+\.[a-z]{2,}$/i';
+		preg_match($re, $mail, $matches);
+		if($matches[0]=='') {
+			echo 'Неверный формат e-mail адреса. Сообщение не будет отправлено';
+			return;
+		};
+		// Формируем сообщение
+		$orderdetails = '';
+		foreach ($cart as $key => $amount) {
+			if($amount==null) continue;
+			$orderdetails = $orderdetails . '<p>' . $items[$key]['name'] . ', вес: ' . $amount . 'кг, цена: ' . ($amount*$items[$key]['price']) . 'р</p>';
+		};
+		if($name!='') $name2 = ', ' . $name;
+		$total = $amount * 5;
+		if($address=='') $address = 'не указан';
+		$message = '
+		<html>
+		<head>
+		<title>Заказ №такой-то</title>
+		<META http-equiv="Content-Type" content="text/html;charset=UTF-8">
+		</head>
+		<body>
+		<p>Здравствуйте' . $name2 . '!</p>
+		<p>Вы заказали:</p>' . $orderdetails .
+		'<p>Адрес доставки: ' . $address . '.</p>
+		<p>В ближайшее время наш менеджер свяжется с вами, чтобы уточнить детали.</p>
+		</body>
+		</html>';
+		// Отправляем на  mail
+		$to  = '<' . $mail .'>';
+		$subject = "Заказ №такой-то";
+		$headers  =
+			"From: Griby <egorkleninekg@gmail.com>\r\n".
+			"Reply-To: egorkleninekg@gmail.com\r\n".
+			"Return-Path: egorkleninekg@gmail.com\r\n".
+			"Organization: Griby\r\n".
+			"MIME-Version: 1.0\r\n".
+			"Content-type: text/html; charset=UTF-8 \r\n".
+			"X-Priority: 3\r\n".
+			'X-Mailer: PHP/' . phpversion();
+		if(wp_mail($to, $subject, $message, $headers)) {
+			echo 'Спасибо за ваш заказ! Подтверждение заказа выслано на ящик ' . $mail;
+		} else {
+			echo 'Не удалось отправить письмо на ящик ' . $mail;
+		};
+	};
+
+
+
+
+
+
+
+//Главная страница
+html
+	head
+		meta(http-equiv='Content-Type', content='text/html; charset=UTF-8')
+		meta(name="viewport" content="width=device-width, initial-scale=1.0")
+		meta(name="robots" content="noindex")
+		title Грибы
+		link(rel='stylesheet', href='/wp-content/themes/grib/style.css', type='text/css', media='screen')
+		link(rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto")
+	
+	body.row
+		// Landing
+		.col.face
+			.face__label Лучшие грибы Атлантиды.
+			h3 Наши грибы почти не ядовиты.
+			button#toorder.order__send Заказать
+			
+		// Заказ
+		.order__container
+			// Товары
+			.row.order__select
+				+php.
+					foreach ($items as $key => $item) {
+						echo '<div class="order__clickbait" data-item="' . $key . '">
+							<div class="order__label">' . $item[name] . '</div>
+							<img src="' . $item[icon] .'" />
+							</div>';
+					};
+			// Форма отправки
+			form.order#order(action="" method="post")
+				// Команда отправки заказа
+				input(name='action' type='hidden' value='none')
+				// Передача корзины в формате JSON
+				input(name='cart' type='hidden' value='{}')
+				// Корзина
+				h3 Шаг 1. Выбор товара
+				.col#cart
+				.row.nowrap
+					#add +
+					.col
+						select#select()
+							option(value='sas') sas
+				// Данные клиента
+				h3 Шаг 2. Ваши контактные данные
+				.row
+					.col.order__name
+						.order__label Ваше имя
+						input#name(name='name' type='text')
+					.col.order__contacts
+						.order__label *Ваш e-mail или телефон для связи (обязательно)
+						.row
+							.col
+								input#mail(name='mail' type='text' value='')
+								.order__check Вам будет отправлено подтверждение заказа
+							.col
+								input#phone(name='phone' type='text' value='375')
+								.order__check либо мы перезвоним
+				.row
+					.col
+						.order__label Адрес доставки
+						input#address(name='address' type='text' value='')
+						.order__check Адрес можно согласовать позже
+				// Оформить заказ
+				h3 Шаг 3. Оформить заказ
+				.row.nowrap
+					input.order__send#send(type='button' value='Заказать')
+					div.fill.nowrap#confirm
+						// Почтовый скрипт
+						+php mailsender()
+				
+
+
+
+
+
+
+	script(type="text/javascript" src="https://code.jquery.com/jquery-3.3.1.min.js")
+	script.
+		var t = 400;
+		// Перечень товаров
+		var items = <?php echo json_encode($items); ?>;
+		var cart = []; // cart[item]=amount
+
+		function itemrow(item) {
+			return `<div class="row" id="item` + item + `">
+				<div class="col order__descr">
+						<div class="order__label">Товар:</div>
+						<div class="row center nowrap">
+							<img src=` + items[item].icon + ` alt=` + items[item].name + ` class="order__image"/>
+							<div class="order__item">` + items[item].name + `</div>
+							<img id='delete' src='/wp-content/uploads/2018/08/del.png' alt='Удалить' />
+						</div>
+				</div>
+				<div class="col order__quant">
+						<div class="order__label">Цена за кг:</div>
+						<div class="fill" id="price">` + items[item].price + `р</div>
+				</div>
+				<div class="col order__quant">
+						<div class="order__label">Вес, кг:</div>
+						<div class="fill">
+								<div class="row center">
+									<b id="less">&minus;</b>
+									<input id="amount" type="text" value="1" />
+									<b id="more">+</b>
+								</div>
+						</div>
+				</div>
+				<div class="col order__quant">
+						<div class="order__label">Итого:</div>
+						<div class="fill">
+								<div id="total">` + items[item].price + `р</div>
+						</div>
+				</div>
+			</div>`;
+		};
+
+		// Список товаров
+		function selectlist() {
+			//Убираем старый список
+			$('#select').html('<option disabled selected value> -- Добавить товар -- </option>');
+			// Заносим в список те товары, которых ещё нет в корзине
+			items.forEach((item,idx)=>{
+				// Если уже есть в карзине, переход к следующему
+				if(cart[idx]!=null) return;
+					$('#select').append('<option value=' + idx + '>' + item.name + '</option>')
+			});
+		};
+
+		// Добавление товара из списка
+		function getselect() {
+			var item = $('#select').val();
+			// Default
+			if (items[item]===undefined) return;
+			additem(item);
+		};
+
+		// Добавление товара
+		function additem(item) {
+			// Проверка наличия в корзине
+			if(cart[item] != null) return;
+			// Добавляем в корзину
+			cart[item]=1;
+			$('#cart').append(itemrow(item));
+			// Привязка обработчиков
+			// Проверка веса
+			$('#item' + item + ' #amount')
+				.blur(()=>{
+					$('#item' + item + ' #amount').val($('#item' + item + ' #amount').val().replace(/[^0-9,]/g,'').replace(/[,\.]+/g,','));
+					weight();
+				});
+			// Изменение веса
+			$('#item' + item + ' #less').click(()=>{
+				weight(item, -0.1);
+			});
+			$('#item' + item + ' #more').click(()=>{
+				weight(item, 0.1);
+			});
+			// Удаление элемента
+			$('#item' + item + ' #delete').click(()=>{
+				removeitem(item);
+			});
+			// Раскрашиваем
+			coloritems();
+			// Обновляем список
+			selectlist();
+		};
+
+		// Удаление товара
+		function removeitem(item) {
+			// Удаляем
+			delete cart[item];
+			setTimeout(()=>{
+				$('#cart #item' + item).remove();
+				// Раскрашиваем
+				coloritems();
+				// Обновляем список
+				selectlist();
+			},t);
+			// Анимация удаления
+			$('#cart #item' + item).animate({height: "0px"}, t);
+		};
+		
+		// Раскрашиваем
+		function coloritems() {
+			$('#cart > .row').removeClass('order__itemlight');
+			$('#cart > .row:even').addClass('order__itemlight');
+		};
+
+		// Изменение веса
+		function weight(item, a) {
+			var w = parseFloat($('#item' + item + ' #amount').val().replace(/,/,'.'));
+			if(a!==undefined) w+=a;
+			if (w!==NaN) {
+				// Изменяем вес в корзине
+				cart[item] = w;
+				$('#item' + item + ' #amount').val(String(w.toFixed(2)).replace(/\./,','));
+				$('#item' + item + ' #total').html((items[item].price*w).toFixed(2) + 'p');
+			}
+		}
+
+		// Валидация email
+		function checkmail() {
+			if($("#mail").val().match(/^[\w.-]*[a-z0-9]@[\w.-]+\.[a-z]{2,}$/i)===null) {
+				$("#mail").removeClass("ok").addClass("error");
+				return 1;
+			} else $("#mail").removeClass("error").addClass("ok");
+				$("#phone").removeClass("error");
+		};
+
+		// Валидация телефона
+		function checkphone() {
+			$("#phone").val($("#phone").val().replace(/[^0-9]/g,''));
+			if($("#phone").val().match(/^[0-9]{9,20}$/i)===null) {
+				$("#phone").removeClass("ok").addClass("error");
+				return 1;
+			} else	$("#phone").removeClass("error").addClass("ok");
+				$("#mail").removeClass("error");
+		};
+
+		// Проверка заказа
+		function ckeckorder() {
+			if (checkmail() && checkphone()) return 1;
+			$('#confirm').html('');
+		};
+
+		function toorder() {
+			$("#order").css({height:'auto', display:'flex'});
+			$('.order__select').animate({height: "0px"}, t).css({display:'none'});
+		};
+
+		// Основной код
+		$(document).ready(function() {
+			//Формирование списка
+			selectlist();
+
+			// Иконки товаров
+			$('.order__clickbait').click((e)=>{
+				var item = $(e.currentTarget).data('item');
+				if(cart[item]!=null) {
+					$(e.currentTarget).removeAttr('data-selected');
+					removeitem(item);
+				} else {
+					$(e.currentTarget).attr('data-selected','true');
+					additem(item);
+				};
+			});
+
+			// Перейти к заказу
+			$('#toorder').click(toorder);
+
+			// Добавление товара
+			$('#add').click(getselect);
+
+			// Проверка email
+			$("#mail").blur(checkmail).keypress(checkmail);
+			// Проверка телефона
+			$("#phone").blur(checkphone).keypress(checkphone);
+
+			// Проверка и отправка заказа
+			$('#send').click(()=>{
+				if(ckeckorder()) {
+					$('#confirm').html('Недостаточно данных для оформления заказа.');
+					return;
+				}
+				//Если данные валидны
+				$('#order [name="action"]').val('order');
+				$('#order [name="cart"]').val(JSON.stringify(cart));
+				$('#order').submit();
+			});
+		
+			<?php 
+				if($_POST["action"]=='order') {
+					echo 'toorder();';
+				};
+			?>
+		});

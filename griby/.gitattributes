@@ -1,0 +1,5 @@
+*.stug text eol=lf
+*.pug text eol=lf
+*.styl text eol=lf
+*.html text eol=lf
+*.md text eol=lf
