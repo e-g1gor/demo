@@ -1,0 +1,17 @@
+include blocks/maxwell
+include blocks/world
+html
+  head
+    meta(charset='utf-8')
+    meta(name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no")
+    meta(name="description" content="")
+    meta(name="author" content="")
+    link(rel="stylesheet" href="/main.css?")
+    link(rel="stylesheet" href="http://fonts.googleapis.com/css?family=Ubuntu:300,400,500,700&subset=cyrillic-ext")
+    title Заголовок
+  
+  body
+    +world
+    +maxwell
+
+  script(src="main.js")
